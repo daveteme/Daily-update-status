@@ -1,18 +1,14 @@
 import { useState, useEffect } from "react";
 
-/* ── helpers ── */
 const getToday = () => {
   const d = new Date();
   return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
-const STATUS_OPTIONS = ["", "Landed", "Delivered", "Already Run", "In Progress", "Done", "Pending", "Blocked"];
-
-const STATUS_COLOR = {
-  Landed: "#34d399", Delivered: "#60a5fa", "Already Run": "#a78bfa",
-  "In Progress": "#fbbf24", Done: "#34d399", Pending: "#9ca3af",
-  Blocked: "#f87171", "": "#374151",
-};
+const STATUS_OPTIONS = [
+  "", "Landed", "Delivered", "Already Run",
+  "In Progress", "Done", "Pending", "Blocked",
+];
 
 const BLOCKER_PRESETS = [
   "Hardware can't be positioned because of load bank testing",
@@ -42,95 +38,132 @@ const defaultForm = {
   completion: "",
 };
 
-/* ── sub-components ── */
-const Dot = ({ color }) => (
-  <span style={{
-    display: "inline-block", width: 7, height: 7, borderRadius: "50%",
-    background: color || "#374151", marginRight: 8, flexShrink: 0,
-    boxShadow: `0 0 6px ${color || "#374151"}88`,
-  }} />
-);
-
-const SectionHead = ({ icon, children }) => (
-  <div style={{
-    display: "flex", alignItems: "center", gap: 8,
-    fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-    textTransform: "uppercase", color: "#6b7280",
-    paddingBottom: 8, marginTop: 22, marginBottom: 12,
-    borderBottom: "1px solid #161f2e",
-  }}>
-    <span style={{ fontSize: 13 }}>{icon}</span>{children}
-  </div>
-);
-
-const SelectField = ({ label, field, form, set }) => (
-  <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-    <Dot color={STATUS_COLOR[form[field]]} />
-    <label style={{ fontSize: 11, color: "#6b7280", width: 130, flexShrink: 0, fontWeight: 500 }}>
-      {label}
-    </label>
-    <div style={{ position: "relative", flex: 1 }}>
-      <select
-        value={form[field]}
-        onChange={e => set(f => ({ ...f, [field]: e.target.value }))}
-        style={{
-          width: "100%", background: "#0a1020", border: "1px solid #1e2d45",
-          borderRadius: 6, color: form[field] ? "#e2e8f0" : "#4b5563",
-          padding: "7px 28px 7px 10px", fontSize: 12,
-          fontFamily: "inherit", cursor: "pointer", appearance: "none", outline: "none",
-        }}
-      >
-        {STATUS_OPTIONS.map(o => (
-          <option key={o} value={o} style={{ background: "#0a1020" }}>{o || "— select —"}</option>
-        ))}
-      </select>
-      <span style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", color: "#4b5563", fontSize: 9, pointerEvents: "none" }}>▾</span>
-    </div>
-  </div>
-);
-
-const TextInput = ({ placeholder, value, onChange }) => (
-  <input
-    value={value}
-    onChange={onChange}
-    placeholder={placeholder}
-    style={{
-      width: "100%", boxSizing: "border-box",
-      background: "#0a1020", border: "1px solid #1e2d45",
-      borderRadius: 6, color: "#e2e8f0",
-      padding: "7px 10px", fontSize: 12, fontFamily: "inherit",
-      outline: "none",
-    }}
-    onFocus={e => e.target.style.borderColor = "#2563eb"}
-    onBlur={e => e.target.style.borderColor = "#1e2d45"}
-  />
-);
-
-const Btn = ({ onClick, children, variant = "secondary", disabled }) => {
-  const v = {
-    primary: { bg: "#1d4ed8", color: "#fff", border: "#2563eb" },
-    secondary: { bg: "#111827", color: "#d1d5db", border: "#1f2937" },
-    danger: { bg: "transparent", color: "#6b7280", border: "#1f2937" },
-  }[variant];
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      background: v.bg, color: v.color, border: `1px solid ${v.border}`,
-      borderRadius: 6, padding: "8px 18px", fontSize: 11, fontWeight: 700,
-      fontFamily: "inherit", cursor: disabled ? "not-allowed" : "pointer",
-      letterSpacing: "0.07em", textTransform: "uppercase",
-      opacity: disabled ? 0.4 : 1, transition: "opacity 0.15s",
-    }}>
-      {children}
-    </button>
-  );
+/* ── Shared styles ── */
+const S = {
+  label: {
+    display: "block",
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: "#666",
+    marginBottom: 5,
+  },
+  input: {
+    width: "100%",
+    boxSizing: "border-box",
+    background: "#000",
+    border: "1px solid #333",
+    borderRadius: 3,
+    color: "#fff",
+    padding: "8px 10px",
+    fontSize: 13,
+    fontFamily: "inherit",
+    outline: "none",
+  },
+  select: {
+    width: "100%",
+    boxSizing: "border-box",
+    background: "#000",
+    border: "1px solid #333",
+    borderRadius: 3,
+    color: "#fff",
+    padding: "8px 10px",
+    fontSize: 13,
+    fontFamily: "inherit",
+    outline: "none",
+    appearance: "none",
+    cursor: "pointer",
+  },
+  divider: {
+    border: "none",
+    borderTop: "1px solid #222",
+    margin: "20px 0",
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: "#555",
+    marginBottom: 12,
+  },
 };
 
-/* ── main ── */
+/* ── Components ── */
+const SelectField = ({ label, field, form, set }) => (
+  <div style={{ marginBottom: 12 }}>
+    <label style={S.label}>{label}</label>
+    <select
+      value={form[field]}
+      onChange={e => set(f => ({ ...f, [field]: e.target.value }))}
+      style={{ ...S.select, color: form[field] ? "#fff" : "#555" }}
+    >
+      {STATUS_OPTIONS.map(o => (
+        <option key={o} value={o} style={{ background: "#000" }}>
+          {o || "Select status"}
+        </option>
+      ))}
+    </select>
+  </div>
+);
+
+const TextInput = ({ label, placeholder, value, onChange }) => (
+  <div style={{ marginBottom: 12 }}>
+    {label && <label style={S.label}>{label}</label>}
+    <input
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      style={S.input}
+      onFocus={e => (e.target.style.borderColor = "#fff")}
+      onBlur={e => (e.target.style.borderColor = "#333")}
+    />
+  </div>
+);
+
+const SectionTitle = ({ children }) => (
+  <div style={S.sectionTitle}>{children}</div>
+);
+
+const ActionBtn = ({ onClick, children, primary, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      background: primary ? "#fff" : "#000",
+      color: primary ? "#000" : "#fff",
+      border: "1px solid #fff",
+      borderRadius: 3,
+      padding: "9px 20px",
+      fontSize: 12,
+      fontWeight: 700,
+      fontFamily: "inherit",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? 0.35 : 1,
+      transition: "background 0.1s, color 0.1s",
+    }}
+    onMouseEnter={e => {
+      if (disabled) return;
+      e.target.style.background = primary ? "#e5e5e5" : "#111";
+    }}
+    onMouseLeave={e => {
+      if (disabled) return;
+      e.target.style.background = primary ? "#fff" : "#000";
+    }}
+  >
+    {children}
+  </button>
+);
+
+/* ── App ── */
 export default function App() {
   const [date] = useState(getToday());
   const [form, setForm] = useState(() => {
     try {
-      const s = localStorage.getItem("dsug-v2");
+      const s = localStorage.getItem("dsug-v3");
       return s ? JSON.parse(s) : defaultForm;
     } catch { return defaultForm; }
   });
@@ -138,39 +171,51 @@ export default function App() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("dsug-v2", JSON.stringify(form));
+    localStorage.setItem("dsug-v3", JSON.stringify(form));
   }, [form]);
 
-  const toggleBlocker = (b) =>
+  const toggleBlocker = b =>
     setForm(f => ({
       ...f,
-      blockers: f.blockers.includes(b) ? f.blockers.filter(x => x !== b) : [...f.blockers, b],
+      blockers: f.blockers.includes(b)
+        ? f.blockers.filter(x => x !== b)
+        : [...f.blockers, b],
     }));
 
   const addCustomBlocker = () => {
     if (!form.customBlocker.trim()) return;
-    setForm(f => ({ ...f, blockers: [...f.blockers, f.customBlocker.trim()], customBlocker: "" }));
-  };
-
-  const toggleNextStep = (s) =>
     setForm(f => ({
       ...f,
-      nextSteps: f.nextSteps.includes(s) ? f.nextSteps.filter(x => x !== s) : [...f.nextSteps, s],
+      blockers: [...f.blockers, f.customBlocker.trim()],
+      customBlocker: "",
+    }));
+  };
+
+  const toggleNextStep = s =>
+    setForm(f => ({
+      ...f,
+      nextSteps: f.nextSteps.includes(s)
+        ? f.nextSteps.filter(x => x !== s)
+        : [...f.nextSteps, s],
     }));
 
   const addCustomStep = () => {
     if (!form.customNextStep.trim()) return;
-    setForm(f => ({ ...f, nextSteps: [...f.nextSteps, f.customNextStep.trim()], customNextStep: "" }));
+    setForm(f => ({
+      ...f,
+      nextSteps: [...f.nextSteps, f.customNextStep.trim()],
+      customNextStep: "",
+    }));
   };
 
   const generate = () => {
     const chk = "✔";
     const bl = form.blockers.length
       ? form.blockers.map(b => `   ${chk} ${b}`).join("\n")
-      : `   (none)`;
+      : "   (none)";
     const ns = form.nextSteps.length
       ? form.nextSteps.map(s => `  ${chk} ${s}`).join("\n")
-      : `  (none)`;
+      : "  (none)";
     const pfho = form.pfhoDate.trim() || "N/A";
     const pct = form.completion.trim() ? `${form.completion.trim()}%` : "__%";
 
@@ -205,186 +250,248 @@ export default function App() {
   const reset = () => {
     setForm(defaultForm);
     setOutput("");
-    localStorage.removeItem("dsug-v2");
+    localStorage.removeItem("dsug-v3");
   };
 
   const allSteps = [...new Set([...NEXT_STEP_PRESETS, ...form.nextSteps])];
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#050d1a", color: "#cbd5e1",
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-      padding: "28px 20px", boxSizing: "border-box",
+      minHeight: "100vh",
+      background: "#000",
+      color: "#fff",
+      fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+      fontSize: 13,
+      boxSizing: "border-box",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
 
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+      {/* Top bar */}
+      <div style={{
+        borderBottom: "1px solid #222",
+        padding: "14px 32px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <div>
           <span style={{
-            background: "#1d4ed8", color: "#fff", fontSize: 10, fontWeight: 700,
-            padding: "3px 8px", borderRadius: 4, letterSpacing: "0.1em",
-          }}>DAILY OPS</span>
-          <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", color: "#f1f5f9" }}>
-            Status Update Generator
-          </h1>
+            fontSize: 13, fontWeight: 700, letterSpacing: "0.08em",
+            textTransform: "uppercase", color: "#fff",
+          }}>
+            Daily Status Update Generator
+          </span>
         </div>
-        <p style={{ margin: 0, fontSize: 11, color: "#374151", letterSpacing: "0.04em" }}>
-          {date} · auto-saved
-        </p>
+        <span style={{ fontSize: 11, color: "#444", letterSpacing: "0.06em" }}>
+          {date}
+        </span>
       </div>
 
-      {/* Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+      {/* Body */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 0,
+        minHeight: "calc(100vh - 49px)",
+      }}>
 
-        {/* ── LEFT PANEL ── */}
-        <div style={{ background: "#080f1e", border: "1px solid #0f1e35", borderRadius: 10, padding: "18px 20px" }}>
+        {/* ── LEFT: Form ── */}
+        <div style={{
+          borderRight: "1px solid #222",
+          padding: "28px 32px",
+          overflowY: "auto",
+        }}>
 
-          <SectionHead icon="🖥️">Hardware Status</SectionHead>
+          <SectionTitle>Hardware Status</SectionTitle>
           <SelectField label="Brick" field="brick" form={form} set={setForm} />
           <SelectField label="Patch Rack" field="patchRack" form={form} set={setForm} />
           <SelectField label="Optics" field="optics" form={form} set={setForm} />
 
-          <SectionHead icon="🔌">Cabling Status</SectionHead>
+          <hr style={S.divider} />
+          <SectionTitle>Cabling Status</SectionTitle>
           <SelectField label="Trunk Cable" field="trunkCable" form={form} set={setForm} />
           <SelectField label="Harnesses" field="harnesses" form={form} set={setForm} />
-          <SelectField label="Mgmt Cable" field="managementCable" form={form} set={setForm} />
+          <SelectField label="Management Cable" field="managementCable" form={form} set={setForm} />
           <SelectField label="Copper Cable" field="copperCable" form={form} set={setForm} />
 
-          <SectionHead icon="🚧">Blockers</SectionHead>
+          <hr style={S.divider} />
+          <SectionTitle>Blockers</SectionTitle>
           {BLOCKER_PRESETS.map(b => (
             <label key={b} style={{
-              display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 7,
-              cursor: "pointer", fontSize: 11, lineHeight: 1.4,
-              color: form.blockers.includes(b) ? "#93c5fd" : "#4b5563",
+              display: "flex", alignItems: "flex-start", gap: 10,
+              marginBottom: 10, cursor: "pointer",
+              color: form.blockers.includes(b) ? "#fff" : "#555",
+              fontSize: 12, lineHeight: 1.5,
             }}>
-              <input type="checkbox" checked={form.blockers.includes(b)}
+              <input
+                type="checkbox"
+                checked={form.blockers.includes(b)}
                 onChange={() => toggleBlocker(b)}
-                style={{ marginTop: 2, accentColor: "#2563eb", flexShrink: 0 }} />
+                style={{ marginTop: 2, accentColor: "#fff", flexShrink: 0 }}
+              />
               {b}
             </label>
           ))}
-          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-            <TextInput
-              placeholder="Custom blocker…"
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <input
               value={form.customBlocker}
               onChange={e => setForm(f => ({ ...f, customBlocker: e.target.value }))}
+              onKeyDown={e => e.key === "Enter" && addCustomBlocker()}
+              placeholder="Add custom blocker..."
+              style={{ ...S.input, flex: 1 }}
+              onFocus={e => (e.target.style.borderColor = "#fff")}
+              onBlur={e => (e.target.style.borderColor = "#333")}
             />
-            <button onClick={addCustomBlocker} style={{
-              background: "#0f1e35", border: "1px solid #1e2d45", borderRadius: 6,
-              color: "#60a5fa", cursor: "pointer", padding: "0 12px", fontSize: 16, flexShrink: 0,
-            }}>+</button>
+            <button
+              onClick={addCustomBlocker}
+              style={{
+                background: "#000", border: "1px solid #333", borderRadius: 3,
+                color: "#fff", cursor: "pointer", padding: "0 14px",
+                fontSize: 18, flexShrink: 0, fontFamily: "inherit",
+              }}
+            >+</button>
           </div>
 
-          <SectionHead icon="📅">Planned PFHO / RZC / SCR</SectionHead>
+          <hr style={S.divider} />
           <TextInput
+            label="Planned PFHO / RZC / SCR"
             placeholder="MM/DD/YYYY or N/A"
             value={form.pfhoDate}
             onChange={e => setForm(f => ({ ...f, pfhoDate: e.target.value }))}
           />
 
-          <SectionHead icon="👤">Project Owner</SectionHead>
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, display: "block" }}>Primary</label>
-            <TextInput
-              placeholder="Name or alias"
-              value={form.primaryOwner}
-              onChange={e => setForm(f => ({ ...f, primaryOwner: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 10, color: "#6b7280", marginBottom: 4, display: "block" }}>Secondary</label>
-            <TextInput
-              placeholder="Name or alias"
-              value={form.secondaryOwner}
-              onChange={e => setForm(f => ({ ...f, secondaryOwner: e.target.value }))}
-            />
-          </div>
+          <hr style={S.divider} />
+          <SectionTitle>Project Owner</SectionTitle>
+          <TextInput
+            label="Primary"
+            placeholder="Name or alias"
+            value={form.primaryOwner}
+            onChange={e => setForm(f => ({ ...f, primaryOwner: e.target.value }))}
+          />
+          <TextInput
+            label="Secondary"
+            placeholder="Name or alias"
+            value={form.secondaryOwner}
+            onChange={e => setForm(f => ({ ...f, secondaryOwner: e.target.value }))}
+          />
 
-          <SectionHead icon="➡️">Next Steps</SectionHead>
+          <hr style={S.divider} />
+          <SectionTitle>Next Steps</SectionTitle>
           {allSteps.map(s => (
             <label key={s} style={{
-              display: "flex", alignItems: "center", gap: 8, marginBottom: 7,
-              cursor: "pointer", fontSize: 11,
-              color: form.nextSteps.includes(s) ? "#86efac" : "#4b5563",
+              display: "flex", alignItems: "center", gap: 10,
+              marginBottom: 10, cursor: "pointer",
+              color: form.nextSteps.includes(s) ? "#fff" : "#555",
+              fontSize: 12,
             }}>
-              <input type="checkbox" checked={form.nextSteps.includes(s)}
+              <input
+                type="checkbox"
+                checked={form.nextSteps.includes(s)}
                 onChange={() => toggleNextStep(s)}
-                style={{ accentColor: "#16a34a" }} />
+                style={{ accentColor: "#fff" }}
+              />
               {s}
             </label>
           ))}
-          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-            <TextInput
-              placeholder="Custom next step…"
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <input
               value={form.customNextStep}
               onChange={e => setForm(f => ({ ...f, customNextStep: e.target.value }))}
+              onKeyDown={e => e.key === "Enter" && addCustomStep()}
+              placeholder="Add custom step..."
+              style={{ ...S.input, flex: 1 }}
+              onFocus={e => (e.target.style.borderColor = "#fff")}
+              onBlur={e => (e.target.style.borderColor = "#333")}
             />
-            <button onClick={addCustomStep} style={{
-              background: "#0f1e35", border: "1px solid #1e2d45", borderRadius: 6,
-              color: "#4ade80", cursor: "pointer", padding: "0 12px", fontSize: 16, flexShrink: 0,
-            }}>+</button>
+            <button
+              onClick={addCustomStep}
+              style={{
+                background: "#000", border: "1px solid #333", borderRadius: 3,
+                color: "#fff", cursor: "pointer", padding: "0 14px",
+                fontSize: 18, flexShrink: 0, fontFamily: "inherit",
+              }}
+            >+</button>
           </div>
 
-          <SectionHead icon="📊">Project Completion</SectionHead>
+          <hr style={S.divider} />
+          <SectionTitle>Project Completion</SectionTitle>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <TextInput
-              placeholder="0"
+            <input
               value={form.completion}
               onChange={e => setForm(f => ({ ...f, completion: e.target.value.replace(/[^0-9]/g, "") }))}
+              placeholder="0"
+              maxLength={3}
+              style={{ ...S.input, width: 80, flexShrink: 0 }}
+              onFocus={e => (e.target.style.borderColor = "#fff")}
+              onBlur={e => (e.target.style.borderColor = "#333")}
             />
-            <span style={{ color: "#6b7280", fontSize: 14, flexShrink: 0 }}>%</span>
+            <span style={{ color: "#555", fontSize: 13 }}>%</span>
+            {form.completion && (
+              <div style={{ flex: 1, background: "#111", borderRadius: 2, height: 4, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  width: `${Math.min(100, parseInt(form.completion) || 0)}%`,
+                  background: "#fff",
+                  transition: "width 0.3s ease",
+                }} />
+              </div>
+            )}
           </div>
-          {form.completion && (
-            <div style={{ marginTop: 10, background: "#0a1020", borderRadius: 6, height: 6, overflow: "hidden" }}>
-              <div style={{
-                height: "100%", borderRadius: 6,
-                width: `${Math.min(100, parseInt(form.completion) || 0)}%`,
-                background: "linear-gradient(90deg, #1d4ed8, #34d399)",
-                transition: "width 0.4s ease",
-              }} />
-            </div>
-          )}
 
-          {/* Buttons */}
-          <div style={{ display: "flex", gap: 8, marginTop: 24, flexWrap: "wrap" }}>
-            <Btn variant="primary" onClick={generate}>⚡ Generate</Btn>
-            <Btn onClick={copy} disabled={!output}>{copied ? "✓ Copied!" : "⎘ Copy"}</Btn>
-            <Btn variant="danger" onClick={reset}>↺ Reset</Btn>
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: 10, marginTop: 28 }}>
+            <ActionBtn primary onClick={generate}>Generate</ActionBtn>
+            <ActionBtn onClick={copy} disabled={!output}>
+              {copied ? "Copied" : "Copy"}
+            </ActionBtn>
+            <ActionBtn onClick={reset}>Reset</ActionBtn>
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── */}
-        <div style={{
-          background: "#080f1e", border: "1px solid #0f1e35", borderRadius: 10,
-          padding: "18px 20px", position: "sticky", top: 20,
-        }}>
+        {/* ── RIGHT: Output ── */}
+        <div style={{ padding: "28px 32px" }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-            textTransform: "uppercase", color: "#374151",
-            marginBottom: 14, paddingBottom: 8, borderBottom: "1px solid #0f1e35",
-            display: "flex", justifyContent: "space-between", alignItems: "center",
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+            textTransform: "uppercase", color: "#444",
+            marginBottom: 16, paddingBottom: 10,
+            borderBottom: "1px solid #222",
+            display: "flex", justifyContent: "space-between",
           }}>
-            <span>Output Preview</span>
+            <span>Output</span>
             {output && (
-              <span style={{ color: "#1d4ed8", cursor: "pointer", fontSize: 10 }} onClick={copy}>
-                {copied ? "✓ copied" : "copy →"}
+              <span
+                style={{ color: "#666", cursor: "pointer", fontWeight: 400 }}
+                onClick={copy}
+              >
+                {copied ? "copied" : "copy"}
               </span>
             )}
           </div>
+
           {output ? (
             <pre style={{
-              margin: 0, whiteSpace: "pre-wrap", fontSize: 12, lineHeight: 1.85,
-              color: "#94a3b8", fontFamily: "'JetBrains Mono', monospace",
+              margin: 0,
+              whiteSpace: "pre-wrap",
+              fontSize: 13,
+              lineHeight: 1.9,
+              color: "#ccc",
+              fontFamily: "inherit",
               wordBreak: "break-word",
             }}>
               {output.split("\n").map((line, i) => {
-                const isHeader = line.startsWith("·") || line.startsWith("Update as of") || line.startsWith("Next Steps") || line.startsWith("Project Completion");
+                const isHeader =
+                  line.startsWith("·") ||
+                  line.startsWith("Update as of") ||
+                  line === "Next Steps" ||
+                  line.startsWith("Project Completion");
                 return (
                   <span key={i} style={{
                     display: "block",
-                    color: isHeader ? "#e2e8f0" : "#64748b",
-                    fontWeight: isHeader ? 700 : 400,
+                    color: isHeader ? "#fff" : "#666",
+                    fontWeight: isHeader ? 600 : 400,
                   }}>
                     {line || "\u00A0"}
                   </span>
@@ -392,9 +499,15 @@ export default function App() {
               })}
             </pre>
           ) : (
-            <div style={{ color: "#1e2d45", fontSize: 11, textAlign: "center", marginTop: 80, lineHeight: 2 }}>
-              Fill in the form and hit<br />
-              <span style={{ color: "#1d4ed8", fontWeight: 700 }}>⚡ Generate</span> to preview
+            <div style={{
+              color: "#2a2a2a",
+              fontSize: 12,
+              marginTop: 100,
+              textAlign: "center",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}>
+              Fill in the form and click Generate
             </div>
           )}
         </div>
